@@ -1,0 +1,24 @@
+{
+  "name": "greenforce-frontend",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "next dev -p 3000",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@carbon/icons-react": "^11.44.0",
+    "@carbon/react": "^1.94.2",
+    "@carbon/styles": "^1.39.0",
+    "next": "^14.2.33",
+    "react": "18.2.0",
+    "react-dom": "18.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "24.9.2",
+    "@types/react": "19.2.2",
+    "sass": "^1.93.2",
+    "typescript": "^5.5.0"
+  }
+}
