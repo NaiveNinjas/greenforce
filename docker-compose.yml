@@ -9,6 +9,10 @@ services:
     ports:
       - "8000:8000"
     restart: unless-stopped
+    volumes:
+      - ./backend:/app
+    networks:
+      - greenforce-net
 
   frontend:
     build:
@@ -20,3 +24,11 @@ services:
     depends_on:
       - backend
     restart: unless-stopped
+    volumes:
+      - ./frontend:/app
+    networks:
+      - greenforce-net
+
+networks:
+  greenforce-net:
+    driver: bridge

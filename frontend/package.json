@@ -4,6 +4,7 @@
   "scripts": {
     "dev": "next dev -p 3000",
     "build": "next build",
+    "standalone": "next build && cp -r .next/static .next/standalone/.next",
     "start": "next start",
     "lint": "next lint"
   },
@@ -11,9 +12,11 @@
     "@carbon/icons-react": "^11.44.0",
     "@carbon/react": "^1.94.2",
     "@carbon/styles": "^1.39.0",
-    "next": "^14.2.33",
-    "react": "18.2.0",
-    "react-dom": "18.2.0"
+    "framer-motion": "^12.23.24",
+    "next": "^16.0.1",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "recharts": "^3.3.0"
   },
   "devDependencies": {
     "@types/node": "24.9.2",

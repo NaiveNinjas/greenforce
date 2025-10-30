@@ -18,10 +18,9 @@ USER 1001
 # Install dependencies
 RUN uv sync --locked
 
-COPY main.py orchestrate_agent.py ./
+COPY main.py ./
 
-# Copy environment file
-COPY .env .env
+COPY utils ./utils
 
 # Expose port
 EXPOSE 8000

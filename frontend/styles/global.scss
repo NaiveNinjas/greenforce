@@ -5,7 +5,7 @@
 @use '@carbon/styles/scss/grid';
 @use '@carbon/styles/scss/reset';
 
-html, body {
+html, body, .cds--layer-one, #__next {
   font-family: 'IBM Plex Sans', sans-serif;
   height: 100%;
 }

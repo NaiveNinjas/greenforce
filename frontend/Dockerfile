@@ -1,29 +1,19 @@
-# Use Node LTS image
-FROM registry.access.redhat.com/ubi9/nodejs-22-minimal
-
-USER root
-
-# Set working directory
+# Specify the base image
+FROM node:22-alpine
 WORKDIR /app
+COPY package*.json ./
 
-# Copy package files
-COPY package.json package-lock.json ./
-
-RUN chown -R 1001:0 /app
-
-USER 1001
-
-# Install dependencies
-RUN npm ci && npx next telemetry disable
-
-# Copy all frontend files
+RUN npm ci
 COPY . .
 
-# Build Next.js app
-RUN npm run build
+RUN npm run standalone
 
-# Expose port
+FROM alpine:3.20
+RUN apk update && apk add --no-cache nodejs
+RUN addgroup -S node && adduser -S node -G node
+USER node
+RUN mkdir /home/node/code && chown -R node:node /home/node/code
+WORKDIR /home/node/code
+COPY --from=0 /app/.next/standalone .
 EXPOSE 3000
-
-# Start Next.js
-CMD ["npm", "run", "start"]
+CMD [ "node", "server.js" ]

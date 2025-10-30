@@ -45,7 +45,7 @@ greenforce/
 2. Install dependencies:
 
 ```bash
-  uv install
+  uv sync
 ```
 
 3. Create a `.env` file:
@@ -65,7 +65,7 @@ Fill in your IBM credentials:
 4. Run the backend server:
 
 ```bash
-  uv run main:app
+  uv run uvicorn app:app
 ```
 
 The backend will be running at [http://localhost:8000](http://localhost:8000).
