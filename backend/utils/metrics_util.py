@@ -3,7 +3,7 @@ import json
 import random
 import time
 from typing import Dict
-from backend.utils.vector_utils import store_metrics_vector
+from utils.vector_utils import store_metrics_vector
 
 
 # --- Generate random metrics ---
