@@ -8,6 +8,7 @@ interface Message {
 }
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:8000'
+const AGENT_ID = process.env.NEXT_PUBLIC_AGENT_ID
 
 export default function ChatBox() {
     const [messages, setMessages] = useState<Message[]>([]);
@@ -29,14 +30,23 @@ export default function ChatBox() {
         setMessages((prev) => [...prev, userMessage]);
 
         try {
-            const res = await fetch(`${API_BASE_URL}/api/chat`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: input, sessionId })
+            const params = new URLSearchParams({
+            query: input,           
+            agent_id: AGENT_ID,          
+            });
+            if (sessionId) {
+                params.append("thread_id", sessionId);
+            }
+            const res = await fetch(`${API_BASE_URL}/chat?${params.toString()}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
             });
             const data = await res.json();
-            const botMessage: Message = { sender: "bot", text: data.output };
-            setSessionId(data.sessionId);
+
+            const botMessage: Message = { sender: "bot", text: data.response };
+            setSessionId(data.thread_id);
             setMessages((prev) => [...prev, botMessage]);
             setInput("");
         } catch (err) {
@@ -78,8 +88,8 @@ export default function ChatBox() {
                 position: 'fixed',
                 bottom: '1.5rem',
                 right: '1.5rem',
-                width: '320px',
-                height: '450px',
+                width: '420px',
+                height: '620px',
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
