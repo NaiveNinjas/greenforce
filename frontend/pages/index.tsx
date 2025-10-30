@@ -2,13 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import {
-  Button,
   Grid,
   Column,
   Heading,
   Tabs,
   Tab,
-  Tile,
   TabList,
   TabPanels,
   TabPanel
@@ -28,17 +26,13 @@ import {
 import {
   EmissionsManagement,
   EnergyRenewable,
-  TrashCan
+  TrashCan,
 } from "@carbon/icons-react";
-
-interface Metrics {
-  timestamp?: string;
-  co2_emissions: number;
-  waste_level: number;
-  energy_usage: number;
-}
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:8000'
+import ForecastTab from '../components/ForecastTab';
+import { API_BASE_URL } from '../constants/app.const';
+import HistoryTab from '../components/HistoryTab';
+import { Metrics } from '../types/metrics';
+import AnalyzeSection from '../components/AnalyzeSection';
 
 export default function Home() {
   const [metrics, setMetrics] = useState<Metrics>({
@@ -46,11 +40,7 @@ export default function Home() {
     waste_level: 0,
     energy_usage: 0,
   });
-  const [history, setHistory] = useState<any[]>([]);
   const [miniChartData, setMiniChartData] = useState<any[]>([]);
-  const [similar, setSimilar] = useState<any[]>([]);
-  const [response, setResponse] = useState<any>(null);
-  const [analyzeResponse, setAnalyzeResponse] = useState<any>(null);
   const [isLive, setIsLive] = useState(false);
   const [activeTab, setActiveTab] = useState(0);
 
@@ -81,77 +71,6 @@ export default function Home() {
     };
 
     return () => eventSource.close();
-  }, []);
-
-  // --- ANALYZE WORKFLOWS ---
-  const analyze = async () => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/analyze`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(metrics),
-      });
-      const data = await res.json();
-      setAnalyzeResponse(data);
-    } catch (e) {
-      console.error('Analyze error', e);
-    }
-  };
-
-  // --- FETCH HISTORY ---
-  const fetchHistory = async () => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/history`);
-      const data = await res.json();
-      const prepared = (data.history || []).map((d: any) => ({
-        timestamp: d.timestamp,
-        co2_emissions: d.co2_emissions,
-        waste_level: d.waste_level,
-        energy_usage: d.energy_usage,
-      }));
-      setHistory(prepared);
-    } catch (e) {
-      console.error('History fetch error', e);
-      setHistory([]);
-    }
-  };
-
-  const findSimilar = async () => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/similar`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(metrics),
-      });
-      const data = await res.json();
-      setSimilar(data.similar || []);
-    } catch (e) {
-      console.error('Find similar error', e);
-      setSimilar([]);
-    }
-  };
-
-  useEffect(() => {
-    if (activeTab === 1) {
-      fetchHistory();
-    }
-  }, [activeTab]);
-
-  // --- FORECAST TAB (Watsonx.ai) ---
-  const fetchForecast = async () => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/forecast`);
-      const data = await res.json();
-      setResponse({ forecast: data.forecast, structured: data.structured });
-    } catch (e) {
-      setResponse({ forecast: 'Unable to fetch forecast.', structured: [] });
-    }
-  };
-
-  useEffect(() => {
-    fetchForecast();
-    const interval = setInterval(fetchForecast, 5000);
-    return () => clearInterval(interval);
   }, []);
 
   return (
@@ -231,97 +150,17 @@ export default function Home() {
                 </ResponsiveContainer>
               </div>
 
-              <Button onClick={analyze} kind="primary" size="lg" style={{ marginTop: '2rem' }}>
-                Analyze & Trigger Workflows
-              </Button>
-
-              {analyzeResponse && (
-                <Tile style={{ marginTop: '2rem', padding: '1rem' }}>
-                  <Heading>🧠 Recommendations</Heading>
-                  <p style={{ color: '#00ff88', whiteSpace: 'pre-line', marginTop: '0.5rem' }}>
-                    {analyzeResponse.recommendation || 'Awaiting recommendation...'}
-                  </p>
-
-                  <Heading style={{ marginTop: '1.25rem' }}>⚙️ Triggered Workflows</Heading>
-                  <pre style={{ color: 'white' }}>{JSON.stringify(analyzeResponse.actions, null, 2)}</pre>
-                </Tile>
-              )}
+              <AnalyzeSection metrics={metrics} />
             </TabPanel>
 
             {/* --- HISTORY TAB --- */}
             <TabPanel id="history">
-              <div style={{ marginTop: '2rem' }}>
-                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                  <Button kind="secondary" onClick={findSimilar}>
-                    Find Similar Patterns
-                  </Button>
-                  <Button kind="tertiary" onClick={fetchHistory}>
-                    Refresh History
-                  </Button>
-                </div>
-
-                <div style={{ marginTop: '1rem', height: 320 }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={history}>
-                      <XAxis dataKey="timestamp" hide />
-                      <YAxis />
-                      <Tooltip />
-                      <Legend />
-                      <Line type="monotone" dataKey="co2_emissions" name="CO₂ (tons)" stroke="#ff6666" dot={false} />
-                      <Line type="monotone" dataKey="waste_level" name="Waste (%)" stroke="#ffaa00" dot={false} />
-                      <Line type="monotone" dataKey="energy_usage" name="Energy (kWh)" stroke="#66ff66" dot={false} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-
-                {similar.length > 0 && (
-                  <Tile style={{ marginTop: '2rem' }}>
-                    <Heading>🔍 Similar Sustainability Patterns</Heading>
-                    <pre style={{ color: 'white' }}>{JSON.stringify(similar, null, 2)}</pre>
-                  </Tile>
-                )}
-              </div>
+              <HistoryTab activeTab={activeTab} metrics={metrics} />
             </TabPanel>
 
             {/* --- FORECAST TAB --- */}
             <TabPanel id="forecast">
-              <div style={{ marginTop: '2rem' }}>
-                <Button kind="primary" onClick={fetchForecast}>
-                  Refresh Forecast
-                </Button>
-
-                {response?.forecast && (
-                  <Tile style={{ marginTop: '2rem', padding: '1rem' }}>
-                    <Heading>📈 Sustainability Forecast (7 Days)</Heading>
-                    <p style={{ whiteSpace: 'pre-line', color: '#00ff88', marginTop: '0.5rem' }}>
-                      <p dangerouslySetInnerHTML={{ __html: response.forecast }} />
-                    </p>
-
-                    {response.structured?.length > 0 && (
-                      <div style={{ marginTop: '2rem', height: '300px' }}>
-                        <ResponsiveContainer width="100%" height="100%">
-                          <LineChart
-                            data={response.structured.map((item) => ({
-                              name: item.metric,
-                              Latest: item.latest,
-                              Predicted: item.predicted,
-                            }))}
-                            margin={{ top: 20, right: 30, left: 0, bottom: 0 }}
-                          >
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="name" />
-                            <YAxis />
-                            <Tooltip />
-                            <Legend />
-                            <Line type="monotone" dataKey="Latest" stroke="#8884d8" strokeWidth={3} />
-                            <Line type="monotone" dataKey="Predicted" stroke="#82ca9d" strokeWidth={3} />
-                          </LineChart>
-                        </ResponsiveContainer>
-                      </div>
-                    )}
-                  </Tile>
-                )}
-              </div>
+              <ForecastTab />
             </TabPanel>
           </TabPanels>
         </Tabs>

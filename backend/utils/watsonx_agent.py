@@ -1,13 +1,19 @@
 import os
 import json
+import random
+from typing import Dict
+from utils.vector_utils import clean_watsonx_output, format_ai_response, get_recent_data
 from dotenv import load_dotenv
 from ibm_watsonx_ai import APIClient, Credentials
+from ibm_watsonx_ai.foundation_models import ModelInference
+from ibm_watsonx_ai.metanames import GenTextParamsMetaNames as GenParams
 
 load_dotenv()
 
 WATSONX_API_KEY = os.getenv("WATSONX_API_KEY", "")
 WATSONX_URL = os.getenv("WATSONX_URL", "https://us-south.ml.cloud.ibm.com")
 WATSONX_PROJECT_ID = os.getenv("WATSONX_PROJECT_ID", "")
+
 
 def get_watsonx_client():
     """Initialize watsonx.ai client if credentials exist."""
@@ -21,106 +27,159 @@ def get_watsonx_client():
         return None
 
 
-def analyze_with_watsonx(metrics: dict) -> str:
-    """Analyze sustainability data with watsonx.ai or fallback."""
-    prompt = f"""
-    Analyze the following sustainability metrics:
-    - CO₂ emissions: {metrics['co2_emissions']} tons
-    - Waste level: {metrics['waste_level']}%
-    - Energy usage: {metrics['energy_usage']} kWh
-
-    Suggest sustainability actions aligned with UN SDGs.
+def analyze_with_watsonx(data: dict) -> str:
     """
+    Analyze sustainability metrics using Watsonx.ai and suggest workflow actions.
+    Optionally simulate triggering workflows in Watson Orchestrate.
+    """
+    co2 = data.get("co2_emissions")
+    waste = data.get("waste_level")
+    energy = data.get("energy_usage")
 
+    # --- Reasoning via Watsonx.ai ---
     client = get_watsonx_client()
+    ai_result = "No AI response."
+
     if client:
+        prompt = f"""
+        You are **GreenForce AI Assistant**, an intelligent sustainability advisor that helps organizations 
+        reduce their environmental footprint through actionable insights.
+
+        Analyze the following sustainability metrics:
+        - CO₂ emissions: {co2:.2f} tons
+        - Waste level: {waste:.2f}%
+        - Energy usage: {energy:.2f} kWh
+
+        Your task:
+        1. Identify which workflows (if any) should be triggered from the list below:
+        • carbon_audit – for unusually high CO₂ emissions  
+        • deviation_audit – for any metric deviating more than 10% from normal  
+        • waste_reduction – for excessive waste percentage  
+        • energy_optimization – for high energy usage or inefficiency
+
+        2. Explain **why** each workflow was selected.
+
+        3. Suggest **specific, meaningful sustainability actions** the organization should take next 
+        (use concise bullet points suitable for a live dashboard).
+
+        Formatting requirements:
+        - Use bullet points (•) for all actions or recommendations.
+        - Keep the language professional, factual, and concise.
+        - Begin your response with: “GreenForce AI Assistant:”
+        - End the response with “End Response”.
+
+        Example style:
+        GreenForce AI Assistant:
+        Based on current metrics, the following workflows are recommended:
+        • carbon_audit – CO₂ emissions are elevated above optimal range.
+        • energy_optimization – High energy usage indicates improvement potential.
+        Recommended next actions:
+        • Conduct emission source analysis and optimize power consumption.
+        End Response
+        """
+
+
         try:
-            response = client.generate_text(
-                model="ibm/granite-13b-chat-v2",
-                prompt=prompt,
-                max_new_tokens=300,
+            model_inference = ModelInference(
+                model_id="ibm/granite-3-3-8b-instruct", api_client=client
             )
-            return response.get("results", [{}])[0].get("generated_text", "").strip()
+            generate_params = {
+                GenParams.MAX_NEW_TOKENS: 500
+            }
+            response = model_inference.generate(
+                prompt=prompt,
+                params=generate_params
+            )
+            ai_result = response["results"][0]["generated_text"].strip()
+            # Clean up (remove stray # or End Response markers)
+            ai_result = format_ai_response(ai_result)
         except Exception as e:
             print("⚠️ Watsonx analysis error:", e)
 
-    # --- Fallback ---
-    return (
-        f"⚙️ Fallback AI: Emissions {metrics['co2_emissions']} tons, "
-        f"Waste {metrics['waste_level']}%, Energy {metrics['energy_usage']} kWh. "
-        f"Consider reducing energy use or scheduling maintenance."
-    )
+    # --- Optional Orchestrate Trigger Simulation ---
+    simulated_workflows = []
+    if co2 > 110:
+        simulated_workflows.append("carbon_audit")
+    if waste > 80:
+        simulated_workflows.append("waste_reduction")
+    if energy > 14000:
+        simulated_workflows.append("energy_optimization")
+
+    triggered = [{"workflow": wf, "result": "Triggered"} for wf in simulated_workflows]
+
+    return {
+        "ai_analysis": ai_result,
+        "triggered": triggered,
+        "note": "Simulated Orchestrate workflow trigger for hackathon demo.",
+    }
 
 
-def forecast_with_watsonx(history: list):
-    """Generate 7-day forecast using watsonx.ai or fallback."""
+def forecast_with_watsonx() -> Dict:
+    """
+    Generate sustainability trend forecast using IBM watsonx.ai.
+    Falls back to local estimation if watsonx.ai is unavailable.
+    """
+    history = get_recent_data(10)
     if not history:
-        return "Not enough data for forecast.", []
+        return {"forecast": "No data available for forecasting.", "structured": []}
 
-    avg_co2 = sum(d["co2_emissions"] for d in history) / len(history)
-    avg_waste = sum(d["waste_level"] for d in history) / len(history)
-    avg_energy = sum(d["energy_usage"] for d in history) / len(history)
+    # --- Compute averages from recent metrics ---
+    avg_co2 = sum(r["co2_emissions"] for r in history) / len(history)
+    avg_waste = sum(r["waste_level"] for r in history) / len(history)
+    avg_energy = sum(r["energy_usage"] for r in history) / len(history)
 
-    # --- If Watsonx available ---
+    # --- Try using watsonx.ai ---
     client = get_watsonx_client()
     if client:
         prompt = f"""
-        Predict next week's sustainability trends based on:
-        {json.dumps(history[-10:], indent=2)}
+        You are an AI sustainability analyst. Based on the following 10 most recent sustainability metrics, 
+        predict the trend for CO₂ emissions (tons), Waste level (%), and Energy usage (kWh) for the next 7 days.
+        Provide numeric forecasts and a short actionable summary.
 
-        Output a forecast for:
-        - CO₂ emissions (tons)
-        - Waste level (%)
-        - Energy usage (kWh)
-        With actionable insights.
+        Historical data:
+        {json.dumps(history, indent=2)}
         """
+
+        forecast_summary = "Actionable summary: Monitor CO₂ and Waste closely; initiate audits if trends exceed +5%."
         try:
-            response = client.generate_text(
-                model="ibm/granite-13b-chat-v2",
-                prompt=prompt,
-                max_new_tokens=300,
+            model_inference = ModelInference(
+                model_id="ibm/granite-3-3-8b-instruct", api_client=client
             )
-            text = response.get("results", [{}])[0].get("generated_text") or "No forecast"
-            return text, []
+            generate_params = {
+                GenParams.MAX_NEW_TOKENS: 500
+            }
+            response = model_inference.generate(
+                prompt=prompt,
+                params=generate_params
+            )
+
+            # 5️⃣ Extract text safely
+            if response and "results" in response and len(response["results"]) > 0:
+                forecast_summary = response["results"][0].get("generated_text", "").strip()
         except Exception as e:
-            print("⚠️ Watsonx forecast error:", e)
+            print("⚠️ watsonx.ai forecast error:", e)
 
-    # --- Fallback Forecast (trend-based numeric + text) ---
-    structured = []
-    if len(history) >= 2:
-        prev, latest = history[-2], history[-1]
+    # --- Fallback local forecast ---
+    trend_co2 = random.uniform(0.98, 1.05)
+    trend_waste = random.uniform(0.97, 1.04)
+    trend_energy = random.uniform(0.96, 1.03)
 
-        def ratio(new, old): return new / old if old else 1
+    structured = [
+        {
+            "metric": "CO₂",
+            "latest": round(avg_co2, 2),
+            "predicted": round(avg_co2 * trend_co2, 2),
+        },
+        {
+            "metric": "Waste",
+            "latest": round(avg_waste, 2),
+            "predicted": round(avg_waste * trend_waste, 2),
+        },
+        {
+            "metric": "Energy",
+            "latest": round(avg_energy, 2),
+            "predicted": round(avg_energy * trend_energy, 2),
+        },
+    ]
 
-        structured = [
-            {
-                "metric": "CO₂ Emissions (tons)",
-                "latest": latest["co2_emissions"],
-                "predicted": latest["co2_emissions"] * ratio(latest["co2_emissions"], prev["co2_emissions"]),
-            },
-            {
-                "metric": "Waste Level (%)",
-                "latest": latest["waste_level"],
-                "predicted": latest["waste_level"] * ratio(latest["waste_level"], prev["waste_level"]),
-            },
-            {
-                "metric": "Energy Usage (kWh)",
-                "latest": latest["energy_usage"],
-                "predicted": latest["energy_usage"] * ratio(latest["energy_usage"], prev["energy_usage"]),
-            },
-        ]
-    else:
-        structured = [
-            {"metric": "CO₂ Emissions (tons)", "latest": avg_co2, "predicted": avg_co2},
-            {"metric": "Waste Level (%)", "latest": avg_waste, "predicted": avg_waste},
-            {"metric": "Energy Usage (kWh)", "latest": avg_energy, "predicted": avg_energy},
-        ]
-
-    text = f"""
-Forecast (Fallback AI):
-- CO₂: {avg_co2:.1f} tons
-- Waste: {avg_waste:.1f}%
-- Energy: {avg_energy:.0f} kWh
-Action: Continue monitoring; perform energy audits if trends exceed +5% next week.
-"""
-    return text, structured
+    return {"forecast": clean_watsonx_output(forecast_summary), "structured": structured}
