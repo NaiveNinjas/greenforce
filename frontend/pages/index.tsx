@@ -114,7 +114,6 @@ export default function Home() {
     }
   };
 
-  // --- SIMILARITY SEARCH (Milvus) ---
   const findSimilar = async () => {
     try {
       const res = await fetch('http://localhost:8000/similar', {

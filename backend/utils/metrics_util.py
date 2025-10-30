@@ -3,7 +3,7 @@ import json
 import random
 import time
 from typing import Dict
-from utils.milvus_utils import store_metrics_vector
+from backend.utils.vector_utils import store_metrics_vector
 
 
 # --- Generate random metrics ---
@@ -20,11 +20,10 @@ def generate_metrics() -> Dict:
 async def stream_metrics():
     while True:
         data = generate_metrics()
-        # store vector in Milvus (best-effort; milvus must be running)
         try:
             store_metrics_vector(data)
         except Exception as e:
             # log but continue streaming
-            print("Milvus store error:", e)
+            print("Vector store error:", e)
         yield f"data: {json.dumps(data)}\n\n"
         await asyncio.sleep(5)

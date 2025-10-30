@@ -1,9 +1,3 @@
-# backend/utils/milvus_utils.py
-"""
-In-memory replacement for Milvus vector storage.
-Stores metric records in a simple list for prototyping or offline use.
-"""
-
 from collections import deque
 from typing import List, Dict
 from datetime import datetime
@@ -27,7 +21,6 @@ def _vector_from_metrics(metrics: Dict) -> List[float]:
 
 
 def init_collection():
-    """No-op (for compatibility with old Milvus interface)."""
     return True
 
 
