@@ -38,6 +38,8 @@ interface Metrics {
   energy_usage: number;
 }
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:8000'
+
 export default function Home() {
   const [metrics, setMetrics] = useState<Metrics>({
     co2_emissions: 0,
@@ -54,7 +56,7 @@ export default function Home() {
 
   // --- LIVE DATA STREAM (SSE) ---
   useEffect(() => {
-    const eventSource = new EventSource('http://localhost:8000/stream');
+    const eventSource = new EventSource(`${API_BASE_URL}/stream`);
     setIsLive(true);
 
     eventSource.onmessage = (event) => {
@@ -84,7 +86,7 @@ export default function Home() {
   // --- ANALYZE WORKFLOWS ---
   const analyze = async () => {
     try {
-      const res = await fetch('http://localhost:8000/analyze', {
+      const res = await fetch(`${API_BASE_URL}/analyze`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(metrics),
@@ -99,7 +101,7 @@ export default function Home() {
   // --- FETCH HISTORY ---
   const fetchHistory = async () => {
     try {
-      const res = await fetch('http://localhost:8000/history');
+      const res = await fetch(`${API_BASE_URL}/history`);
       const data = await res.json();
       const prepared = (data.history || []).map((d: any) => ({
         timestamp: d.timestamp,
@@ -116,7 +118,7 @@ export default function Home() {
 
   const findSimilar = async () => {
     try {
-      const res = await fetch('http://localhost:8000/similar', {
+      const res = await fetch(`${API_BASE_URL}/similar`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(metrics),
@@ -138,7 +140,7 @@ export default function Home() {
   // --- FORECAST TAB (Watsonx.ai) ---
   const fetchForecast = async () => {
     try {
-      const res = await fetch('http://localhost:8000/forecast');
+      const res = await fetch(`${API_BASE_URL}/forecast`);
       const data = await res.json();
       setResponse({ forecast: data.forecast, structured: data.structured });
     } catch (e) {

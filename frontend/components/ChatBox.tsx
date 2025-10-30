@@ -7,6 +7,8 @@ interface Message {
     text: string;
 }
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:8000'
+
 export default function ChatBox() {
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState('');
@@ -27,7 +29,7 @@ export default function ChatBox() {
         setMessages((prev) => [...prev, userMessage]);
 
         try {
-            const res = await fetch('http://localhost:8000/api/chat', {
+            const res = await fetch(`${API_BASE_URL}/api/chat`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ message: input, sessionId })
