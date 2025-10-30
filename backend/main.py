@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 
 # Import in-memory vector utils
-from utils.milvus_utils import (
+from backend.utils.vector_utils import (
     store_metrics_vector,
     get_recent_metrics,
     find_similar_metrics,
