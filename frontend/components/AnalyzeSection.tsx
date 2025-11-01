@@ -17,6 +17,7 @@ import {
 import { API_BASE_URL } from '../constants/app.const';
 import { Metrics } from '../types/metrics';
 import { CheckmarkOutline, Play } from '@carbon/icons-react';
+import { formetWorkflowTitle } from '../utils/app.util';
 
 type Props = {
     metrics: Metrics;
@@ -113,7 +114,7 @@ export default function AnalyzeSection({ metrics }: Props) {
                                             {aiResponse.recommended_workflows.map((wf) => (
                                                 <ContainedListItem>
                                                     <Tile>
-                                                        {wf.name}
+                                                        {formetWorkflowTitle(wf.name)}
                                                         <br />
                                                         <br />
                                                         {wf.reason}
@@ -141,7 +142,7 @@ export default function AnalyzeSection({ metrics }: Props) {
                                     <div>
                                         <ContainedList label="" kind="on-page">
                                             {triggeredWorkflows.recommended_workflows.map((wf) => (
-                                                <ContainedListItem renderIcon={CheckmarkOutline}><span>{wf.name}</span><Tag type="green" size="sm">
+                                                <ContainedListItem renderIcon={CheckmarkOutline}><span>{formetWorkflowTitle(wf.name)}</span><Tag type="green" size="sm">
                                                     {wf.reason}
                                                 </Tag></ContainedListItem>
                                             ))}

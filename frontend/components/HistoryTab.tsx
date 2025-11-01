@@ -17,6 +17,7 @@ import {
 } from 'recharts';
 import { API_BASE_URL } from '../constants/app.const';
 import { Metrics } from '../types/metrics';
+import SimilarPatterns from './SimilarPatterns';
 
 type Props = {
     activeTab: number;
@@ -67,6 +68,30 @@ export default function HistoryTab({ activeTab, metrics }: Props) {
         }
     }, [activeTab]);
 
+    const patterns = [
+        {
+            timestamp: "2025-11-01T11:40:32.380681",
+            co2_emissions: 91.95,
+            waste_level: 82.77,
+            energy_usage: 12680.22,
+            score: 43.5035,
+        },
+        {
+            timestamp: "2025-11-01T11:40:37.381806",
+            co2_emissions: 117.76,
+            waste_level: 64.34,
+            energy_usage: 13603.48,
+            score: 960.0049,
+        },
+        {
+            timestamp: "2025-11-01T11:40:57.382108",
+            co2_emissions: 117.18,
+            waste_level: 67.71,
+            energy_usage: 13812.58,
+            score: 1169.0535,
+        },
+    ];
+
     return (
         <div style={{ marginTop: '2rem' }}>
             <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
@@ -92,12 +117,9 @@ export default function HistoryTab({ activeTab, metrics }: Props) {
                 </ResponsiveContainer>
             </div>
 
-            {similar.length > 0 && (
-                <Tile style={{ marginTop: '2rem' }}>
-                    <Heading>🔍 Similar Sustainability Patterns</Heading>
-                    <pre style={{ color: 'white' }}>{JSON.stringify(similar, null, 2)}</pre>
-                </Tile>
-            )}
+            <div style={{ padding: "2rem" }}>
+                <SimilarPatterns data={patterns} />
+            </div>
         </div>
     )
 }
