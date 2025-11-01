@@ -31,7 +31,12 @@ export default function ChatBox() {
         const userMessage: Message = { sender: 'user', text: input };
         setMessages((prev) => [...prev, userMessage]);
         setInput("");
-
+        const addLink = (text: string) => {
+        const urlRegex = /(https?:\/\/[^\s]+)/g;
+        return text.replace(urlRegex, (url) => 
+            `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`
+        );
+        };
         try {
             const params = new URLSearchParams({
                 query: input,
@@ -47,8 +52,8 @@ export default function ChatBox() {
                 }
             });
             const data = await res.json();
-
-            const botMessage: Message = { sender: "bot", text: data.response };
+             
+            const botMessage: Message = { sender: "bot", text: addLink(data.response) };
             setSessionId(data.thread_id);
             setMessages((prev) => [...prev, botMessage]);
         } catch (err) {
@@ -152,8 +157,10 @@ export default function ChatBox() {
                                 maxWidth: '80%',
                                 wordBreak: 'break-word',
                             }}
+                              dangerouslySetInnerHTML={{ __html: msg.text }}
+
                         >
-                            {msg.text}
+
                         </div>
                     </div>
                 ))}
