@@ -2,7 +2,7 @@ import os
 import json
 import random
 from typing import Dict
-from utils.vector_utils import clean_watsonx_output, format_ai_response, get_recent_data
+from utils.vector_utils import clean_watsonx_output, format_ai_response, get_recent_data, process_analyze_response
 from dotenv import load_dotenv
 from ibm_watsonx_ai import APIClient, Credentials
 from ibm_watsonx_ai.foundation_models import ModelInference
@@ -42,7 +42,7 @@ def analyze_with_watsonx(data: dict) -> str:
 
     if client:
         prompt = f"""
-        You are **GreenForce AI Assistant**, an intelligent sustainability advisor that helps organizations 
+        You are **GreenForce AI Assistant**, an intelligent sustainability advisor that helps organizations
         reduce their environmental footprint through actionable insights.
 
         Analyze the following sustainability metrics:
@@ -50,34 +50,89 @@ def analyze_with_watsonx(data: dict) -> str:
         - Waste level: {waste:.2f}%
         - Energy usage: {energy:.2f} kWh
 
-        Your task:
-        1. Identify which workflows (if any) should be triggered from the list below:
-        • carbon_audit – for unusually high CO₂ emissions  
-        • deviation_audit – for any metric deviating more than 10% from normal  
-        • waste_reduction – for excessive waste percentage  
-        • energy_optimization – for high energy usage or inefficiency
+        ---
 
-        2. Explain **why** each workflow was selected.
+        ### Your task:
+        1. From the list of workflows below, **select and describe at least three (3)** that should be triggered based on the provided data.  
+        You may include additional workflows if relevant.
 
-        3. Suggest **specific, meaningful sustainability actions** the organization should take next 
-        (use concise bullet points suitable for a live dashboard).
+        **Available workflows:**
+        • **carbon_audit** – for unusually high CO₂ emissions  
+        • **deviation_audit** – for any metric deviating more than 10% from baseline  
+        • **waste_reduction** – for excessive waste generation or low recycling rate  
+        • **energy_optimization** – for high or inefficient energy consumption  
+        • **water_conservation** – for abnormal water usage or leakage detection  
+        • **renewable_integration** – to assess feasibility of solar, wind, or green energy options  
+        • **supply_chain_sustainability** – to audit supplier emissions and material sourcing impact  
+        • **green_procurement** – to prioritize eco-friendly materials and vendors  
+        • **compliance_audit** – for ESG or sustainability compliance validation  
+        • **employee_engagement** – to promote eco-awareness and sustainable behavior in teams  
 
-        Formatting requirements:
-        - Use bullet points (•) for all actions or recommendations.
-        - Keep the language professional, factual, and concise.
-        - Begin your response with: “GreenForce AI Assistant:”
-        - End the response with “End Response”.
+        2. For each selected workflow, explain **why** it was triggered.  
+        3. Suggest **specific, meaningful sustainability actions** the organization should take next.  
+        Keep all recommendations concise and suitable for a live sustainability dashboard.
 
-        Example style:
+        ---
+
+        ### Formatting requirements:
+        - Always include **at least three (3)** workflows.  
+        - Use **bullet points (•)** for all workflows and next actions.  
+        - Keep the tone **professional, factual, and actionable**.  
+        - Begin the response with:
+        `GreenForce AI Assistant:`  
+        - End the response with:
+        `End Response`
+
+        After the written explanation, provide a **machine-readable JSON object** enclosed in `<json>` tags, strictly following this structure:
+
+        <json>
+        {{
+        "ai_analysis": "Concise summary of insights (200 words)",
+        "recommended_workflows": [
+            {{"name": "carbon_audit", "reason": "High CO₂ levels detected"}},
+            {{"name": "waste_reduction", "reason": "Excessive waste generation"}}
+        ],
+        "next_actions": [
+            "Conduct a carbon footprint analysis",
+            "Implement a recycling and composting program"
+        ]
+        }}
+        </json>
+
+        Ensure the JSON is syntactically correct and directly parsable.
+
+        ---
+
+        ### Example Output:
         GreenForce AI Assistant:
-        Based on current metrics, the following workflows are recommended:
-        • carbon_audit – CO₂ emissions are elevated above optimal range.
-        • energy_optimization – High energy usage indicates improvement potential.
-        Recommended next actions:
-        • Conduct emission source analysis and optimize power consumption.
-        End Response
-        """
+        Based on the provided sustainability data, the following workflows are recommended:
+        • carbon_audit – CO₂ emissions of 102.4 tons exceed optimal limits.  
+        • waste_reduction – Waste levels of 58% highlight need for recycling improvements.  
+        • renewable_integration – Energy use patterns indicate potential for renewable energy adoption.
 
+        Recommended next actions:
+        • Perform detailed CO₂ source mapping and emission reduction planning.  
+        • Expand recycling and composting initiatives to reduce landfill dependency.  
+        • Evaluate solar or wind integration to offset grid electricity usage.
+
+        End Response
+
+        <json>
+        {{
+        "ai_analysis": "High emissions and waste levels indicate immediate sustainability interventions are needed.",
+        "recommended_workflows": [
+            {{"name": "carbon_audit", "reason": "Elevated CO₂ emissions"}},
+            {{"name": "waste_reduction", "reason": "High waste generation rate"}},
+            {{"name": "renewable_integration", "reason": "Energy usage optimization opportunity"}}
+        ],
+        "next_actions": [
+            "Analyze CO₂ emission sources and implement reduction roadmap",
+            "Enhance recycling programs and track waste metrics weekly",
+            "Adopt renewable power sources to lower long-term energy impact"
+        ]
+        }}
+        </json>
+        """
 
         try:
             model_inference = ModelInference(
@@ -91,26 +146,13 @@ def analyze_with_watsonx(data: dict) -> str:
                 params=generate_params
             )
             ai_result = response["results"][0]["generated_text"].strip()
-            # Clean up (remove stray # or End Response markers)
-            ai_result = format_ai_response(ai_result)
+            return process_analyze_response(ai_result)
         except Exception as e:
             print("⚠️ Watsonx analysis error:", e)
 
-    # --- Optional Orchestrate Trigger Simulation ---
-    simulated_workflows = []
-    if co2 > 110:
-        simulated_workflows.append("carbon_audit")
-    if waste > 80:
-        simulated_workflows.append("waste_reduction")
-    if energy > 14000:
-        simulated_workflows.append("energy_optimization")
-
-    triggered = [{"workflow": wf, "result": "Triggered"} for wf in simulated_workflows]
-
     return {
-        "ai_analysis": ai_result,
-        "triggered": triggered,
-        "note": "Simulated Orchestrate workflow trigger for hackathon demo.",
+        "ai_analysis": "Could not generate analysis",
+        "triggered": "Workflows could not be triggered"
     }
 
 

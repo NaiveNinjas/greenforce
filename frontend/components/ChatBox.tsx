@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, KeyboardEvent } from 'react';
-import { Tile, TextInput, Button } from '@carbon/react';
+import { Tile, TextInput, Button, SkeletonPlaceholder, SkeletonText } from '@carbon/react';
 import { ChatLaunch, Close } from '@carbon/icons-react';
 
 interface Message {
@@ -15,6 +15,7 @@ export default function ChatBox() {
     const [input, setInput] = useState('');
     const [sessionId, setSessionId] = useState<string | undefined>(undefined);
     const [isOpen, setIsOpen] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
     const scrollToBottom = () => {
@@ -26,13 +27,15 @@ export default function ChatBox() {
     const sendMessage = async () => {
         if (!input.trim()) return;
 
+        setIsLoading(true)
         const userMessage: Message = { sender: 'user', text: input };
         setMessages((prev) => [...prev, userMessage]);
+        setInput("");
 
         try {
             const params = new URLSearchParams({
-            query: input,           
-            agent_id: AGENT_ID,          
+                query: input,
+                agent_id: AGENT_ID,
             });
             if (sessionId) {
                 params.append("thread_id", sessionId);
@@ -48,7 +51,6 @@ export default function ChatBox() {
             const botMessage: Message = { sender: "bot", text: data.response };
             setSessionId(data.thread_id);
             setMessages((prev) => [...prev, botMessage]);
-            setInput("");
         } catch (err) {
             console.error(err);
             setMessages((prev) => [
@@ -56,6 +58,7 @@ export default function ChatBox() {
                 { sender: 'bot', text: '⚠️ Sorry, something went wrong.' },
             ]);
         }
+        setIsLoading(false)
     };
 
     const handleKeyPress = (e: KeyboardEvent<HTMLInputElement>) => {
@@ -154,6 +157,11 @@ export default function ChatBox() {
                         </div>
                     </div>
                 ))}
+                {isLoading && <SkeletonText
+                    paragraph
+                    lineCount={3}
+                    width="80%"
+                />}
                 <div ref={messagesEndRef} />
             </div>
 

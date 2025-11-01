@@ -1,4 +1,5 @@
 from collections import deque
+import json
 import re
 from typing import List, Dict
 from datetime import datetime
@@ -145,3 +146,44 @@ def format_ai_response(text: str) -> str:
 
     html = "<div class='cds--content'>" + "".join(formatted_blocks) + "</div>"
     return html
+
+
+def process_analyze_response(response_text: str):
+    """
+    Parse Watsonx.ai model output for GreenForce Assistant.
+    Extracts human-readable AI analysis and structured workflow data.
+    """
+
+    # 1️⃣ Separate the text portion (before <json>)
+    parts = re.split(r"<json>", response_text, maxsplit=1)
+    text_part = parts[0].strip()
+
+    # 2️⃣ Extract JSON portion (if present)
+    json_data = {}
+    if len(parts) > 1:
+        json_block = parts[1].split("</json>")[0].strip()
+        try:
+            # Some models might output stray ``` or formatting symbols
+            json_block = re.sub(r"```(?:json)?", "", json_block).strip()
+            json_data = json.loads(json_block)
+        except json.JSONDecodeError as e:
+            print("⚠️ JSON parsing error:", e)
+            print("Raw JSON block:", json_block)
+            json_data = {"error": "Invalid JSON format from model."}
+
+    # 3️⃣ Extract keys safely
+    ai_analysis = json_data.get("ai_analysis") or text_part or "No analysis available."
+    recommended_workflows = json_data.get("recommended_workflows", [])
+    next_actions = json_data.get("next_actions", [])
+
+    # 4️⃣ Build structured API response
+    triggered = {
+        "recommended_workflows": recommended_workflows,
+        "next_actions": next_actions
+    }
+
+    # 5️⃣ Return formatted output for API/UI
+    return {
+        "ai_analysis": format_ai_response(ai_analysis),
+        "triggered": triggered
+    }
