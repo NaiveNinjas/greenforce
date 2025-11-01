@@ -33,6 +33,7 @@ import { API_BASE_URL } from '../constants/app.const';
 import HistoryTab from '../components/HistoryTab';
 import { Metrics } from '../types/metrics';
 import AnalyzeSection from '../components/AnalyzeSection';
+import Image from "next/image";
 
 export default function Home() {
   const [metrics, setMetrics] = useState<Metrics>({
@@ -77,7 +78,16 @@ export default function Home() {
     <Grid fullWidth style={{ marginTop: '2rem' }}>
       <Column sm={4} md={8} lg={16}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <Heading>🌿 GreenForce Sustainability Assistant</Heading>
+          <div style={{ display: 'flex' }} className="flex items-center space-x-3">
+            <Image
+              src="/logo.png"
+              alt="GreenForce Logo"
+              width={55}
+              height={55}
+              priority
+            />
+            <Heading style={{ paddingLeft: '0.5rem' }}> GreenForce Sustainability Assistant</Heading>
+          </div>
           <span style={{ color: isLive ? 'limegreen' : 'gray', fontWeight: 600 }}>
             ● {isLive ? 'Live data streaming' : 'Offline'}
           </span>
