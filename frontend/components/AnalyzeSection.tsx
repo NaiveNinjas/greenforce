@@ -1,10 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
-    Button,
+    Column,
     ContainedList,
     ContainedListItem,
+    InlineLoading,
+    InlineNotification,
     SkeletonPlaceholder,
     Tab,
     TabList,
@@ -16,18 +18,27 @@ import {
 } from '@carbon/react';
 import { API_BASE_URL } from '../constants/app.const';
 import { Metrics } from '../types/metrics';
-import { CheckmarkOutline, Play } from '@carbon/icons-react';
+import { CheckmarkOutline } from '@carbon/icons-react';
 import { formetWorkflowTitle } from '../utils/app.util';
 
 type Props = {
+    alertMessage: string;
+    anomaly: boolean;
     metrics: Metrics;
+    processing: boolean;
 };
 
-export default function AnalyzeSection({ metrics }: Props) {
+export default function AnalyzeSection({ alertMessage, anomaly, metrics, processing }: Props) {
     const [isLoading, setIsLoading] = useState(-1)
     const [activeTab, setActiveTab] = useState(0);
     const [aiResponse, setAiResponse] = useState<any>(null);
     const [triggeredWorkflows, setTriggeredWorkflows] = useState<any>(null);
+
+    useEffect(() => {
+        if (processing) {
+            analyze()
+        }
+    }, [processing])
 
     // --- ANALYZE WORKFLOWS ---
     const analyze = async () => {
@@ -72,8 +83,8 @@ export default function AnalyzeSection({ metrics }: Props) {
                         "reason": "High energy consumption"
                     },
                     {
-                        "name": "waste_reduction",
-                        "reason": "High waste generation"
+                        "name": "alert_plant_manager",
+                        "reason": "System alerted"
                     }
                 ],
                 "next_actions": [
@@ -90,9 +101,36 @@ export default function AnalyzeSection({ metrics }: Props) {
 
     return (
         <>
-            <Button onClick={analyze} renderIcon={Play} kind="primary" size="lg" style={{ marginTop: '2rem' }}>
+            {/* <Button onClick={analyze} renderIcon={Play} kind="primary" size="lg" style={{ marginTop: '2rem' }}>
                 Analyze & Trigger Workflows
-            </Button>
+            </Button> */}
+            {/* --- ANOMALY DETECTION SECTION --- */}
+            {anomaly && (
+                <Column sm={4} md={8} lg={16}>
+                    <InlineNotification
+                        kind="error"
+                        title="Anomaly Detected"
+                        subtitle={alertMessage}
+                        lowContrast={false}
+                        hideCloseButton
+                        style={{
+                            marginTop: "1rem",
+                            backgroundColor: "#fff1f1",
+                            borderLeft: "5px solid #da1e28",
+                            animation: "pulse 1.5s infinite"
+                        }}
+                    />
+                    {processing && (
+                        <div style={{ marginTop: "1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                            <InlineLoading
+                                description="Triggering corrective workflow..."
+                                status="active"
+                            />
+                            <span style={{ color: "#6f6f6f" }}>Processing...</span>
+                        </div>
+                    )}
+                </Column>
+            )}
             <div style={{ marginTop: '1rem' }}>
                 {isLoading == 1 && (
                     <SkeletonPlaceholder style={{ width: '100%' }} />
@@ -101,11 +139,36 @@ export default function AnalyzeSection({ metrics }: Props) {
                 {!isLoading && (
                     <Tabs selectedIndex={activeTab} onChange={(data) => setActiveTab(data.selectedIndex)}>
                         <TabList scrollDebounceWait={200}>
-                            <Tab>AI Analysis</Tab>
                             <Tab>Triggered Workflows</Tab>
+                            <Tab>AI Analysis</Tab>
                         </TabList>
 
                         <TabPanels>
+                            {/* Triggered Workflows Panel */}
+                            <TabPanel id="triggered_workflows" className="mt-4">
+                                {triggeredWorkflows && triggeredWorkflows.recommended_workflows?.length > 0 ? (
+                                    <div>
+                                        <ContainedList label="" kind="on-page">
+                                            {triggeredWorkflows.recommended_workflows.map((wf) => (
+                                                <ContainedListItem renderIcon={CheckmarkOutline}><span>{formetWorkflowTitle(wf.name)}</span><Tag type="green" size="sm">
+                                                    {wf.reason}
+                                                </Tag></ContainedListItem>
+                                            ))}
+                                        </ContainedList>
+
+                                        <div className="mt-4">
+                                            <ContainedList label="Recommended Next Actions" kind="on-page">
+                                                {triggeredWorkflows.next_actions?.map((action, index) => (
+                                                    <ContainedListItem>{action}</ContainedListItem>
+                                                ))}
+                                            </ContainedList>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <p className="text-text-secondary">No workflows were triggered.</p>
+                                )}
+                            </TabPanel>
+
                             {/* AI Analysis Panel */}
                             <TabPanel id="ai_analysis" className="mt-4">
                                 {aiResponse && aiResponse.recommended_workflows?.length > 0 ? (
@@ -133,31 +196,6 @@ export default function AnalyzeSection({ metrics }: Props) {
                                     </div>
                                 ) : (
                                     <p className="text-text-secondary">No AI analysis available.</p>
-                                )}
-                            </TabPanel>
-
-                            {/* Triggered Workflows Panel */}
-                            <TabPanel id="triggered_workflows" className="mt-4">
-                                {triggeredWorkflows && triggeredWorkflows.recommended_workflows?.length > 0 ? (
-                                    <div>
-                                        <ContainedList label="" kind="on-page">
-                                            {triggeredWorkflows.recommended_workflows.map((wf) => (
-                                                <ContainedListItem renderIcon={CheckmarkOutline}><span>{formetWorkflowTitle(wf.name)}</span><Tag type="green" size="sm">
-                                                    {wf.reason}
-                                                </Tag></ContainedListItem>
-                                            ))}
-                                        </ContainedList>
-
-                                        <div className="mt-4">
-                                            <ContainedList label="Recommended Next Actions" kind="on-page">
-                                                {triggeredWorkflows.next_actions?.map((action, index) => (
-                                                    <ContainedListItem>{action}</ContainedListItem>
-                                                ))}
-                                            </ContainedList>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <p className="text-text-secondary">No workflows were triggered.</p>
                                 )}
                             </TabPanel>
                         </TabPanels>

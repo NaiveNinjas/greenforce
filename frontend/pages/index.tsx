@@ -9,7 +9,7 @@ import {
   Tab,
   TabList,
   TabPanels,
-  TabPanel
+  TabPanel,
 } from '@carbon/react';
 import MetricCard from '../components/MetricCard';
 import ChatBox from '../components/ChatBox';
@@ -45,6 +45,11 @@ export default function Home() {
   const [isLive, setIsLive] = useState(false);
   const [activeTab, setActiveTab] = useState(0);
 
+  // --- anomaly state ---
+  const [anomaly, setAnomaly] = useState(false);
+  const [processing, setProcessing] = useState(false);
+  const [alertMessage, setAlertMessage] = useState("");
+
   // --- LIVE DATA STREAM (SSE) ---
   useEffect(() => {
     const eventSource = new EventSource(`${API_BASE_URL}/stream`);
@@ -61,6 +66,11 @@ export default function Home() {
           if (updated.length > 10) updated.shift();
           return updated;
         });
+
+        // --- detect anomaly ---
+        if (!anomaly && !processing) {
+          setTimeout(() => handleAnomaly("CO₂ emissions exceed safe threshold"), 2000);
+        }
       } catch (e) {
         console.error('Error parsing SSE data', e);
       }
@@ -72,7 +82,26 @@ export default function Home() {
     };
 
     return () => eventSource.close();
-  }, []);
+  }, [anomaly, processing]);
+
+  // --- function to handle anomaly event ---
+  const handleAnomaly = async (msg: string) => {
+    setAnomaly(true);
+    setAlertMessage(msg);
+    setProcessing(true);
+
+    // simulate workflow trigger delay
+    await new Promise((r) => setTimeout(r, 2500));
+
+    console.log("Triggering corrective action for anomaly...");
+    setProcessing(false);
+    // setTimeout(() => setAnomaly(false), 5000);
+  };
+
+  const onTabChange = (data) => {
+    setActiveTab(data.selectedIndex)
+    if (data.selectedIndex != 0) { setAnomaly(false) }
+  }
 
   return (
     <Grid fullWidth style={{ marginTop: '2rem' }}>
@@ -95,7 +124,7 @@ export default function Home() {
       </Column>
 
       <Column sm={4} md={8} lg={16}>
-        <Tabs selectedIndex={activeTab} onChange={(data) => setActiveTab(data.selectedIndex)}>
+        <Tabs selectedIndex={activeTab} onChange={onTabChange}>
           <TabList scrollDebounceWait={200}>
             <Tab>Dashboard</Tab>
             <Tab>History</Tab>
@@ -160,7 +189,7 @@ export default function Home() {
                 </ResponsiveContainer>
               </div>
 
-              <AnalyzeSection metrics={metrics} />
+              <AnalyzeSection alertMessage={alertMessage} anomaly={anomaly} metrics={metrics} processing={processing} />
             </TabPanel>
 
             {/* --- HISTORY TAB --- */}
@@ -179,6 +208,16 @@ export default function Home() {
       <Column sm={4} md={8} lg={16}>
         <ChatBox />
       </Column>
+
+      <style>
+        {`
+          @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.6; }
+            100% { opacity: 1; }
+          }
+        `}
+      </style>
     </Grid>
   );
 }
